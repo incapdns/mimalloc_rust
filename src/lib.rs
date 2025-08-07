@@ -28,7 +28,7 @@
 extern crate libmimalloc_sys as ffi;
 
 #[cfg(feature = "extended")]
-mod extended;
+pub mod extended;
 
 use core::alloc::{GlobalAlloc, Layout};
 use core::ffi::c_void;
