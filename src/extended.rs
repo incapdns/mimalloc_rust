@@ -1,6 +1,8 @@
 use crate::MiMalloc;
 use core::ffi::c_void;
 
+pub use ffi::*;
+
 impl MiMalloc {
     /// Get the mimalloc version.
     ///
