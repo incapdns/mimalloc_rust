@@ -49,5 +49,15 @@ fn main() {
     // Extra check that the symbol was actually from the same place.
     let dep = unsafe { CStr::from_ptr(dep_lookup_malloc_address()) };
     let here = unsafe { CStr::from_ptr(lookup_malloc_address()) };
-    assert_eq!(dep, here);
+
+    if cfg!(target_vendor = "apple") {
+        // macOS / Mach-O symbols are not overriden in dependencies, they are
+        // hooked into with `zone_register`.
+        assert_eq!(
+            dep.to_str().unwrap(),
+            "/usr/lib/system/libsystem_malloc.dylib"
+        );
+    } else {
+        assert_eq!(dep, here);
+    }
 }
