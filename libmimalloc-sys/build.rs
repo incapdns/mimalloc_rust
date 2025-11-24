@@ -1,4 +1,5 @@
 use std::env;
+use std::path::Path;
 
 fn main() {
     let mut build = cc::Build::new();
@@ -8,6 +9,18 @@ fn main() {
     } else {
         "v2"
     };
+
+    let cargo_manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+    let include_dir = Path::new(&cargo_manifest_dir)
+        .join("c_src/mimalloc/")
+        .join(version)
+        .join("include")
+        .to_str()
+        .expect("include path is not valid UTF-8")
+        .to_string();
+    // Make the include directory available to consumers via the `DEP_MIMALLOC_INCLUDE_DIR`
+    // environment variable.
+    println!("cargo:INCLUDE_DIR={include_dir}");
 
     build.include(format!("c_src/mimalloc/{version}/include"));
     build.include(format!("c_src/mimalloc/{version}/src"));
