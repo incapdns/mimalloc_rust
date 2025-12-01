@@ -67,6 +67,11 @@ unsafe impl GlobalAlloc for MiMalloc {
     }
 }
 
+#[inline]
+pub fn collect(force: bool) {
+    mi_collect(force);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
