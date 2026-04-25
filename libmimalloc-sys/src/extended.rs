@@ -202,6 +202,10 @@ extern "C" {
     /// know for certain.
     pub fn mi_zalloc_small(size: usize) -> *mut c_void;
 
+    /// Free a small object. Only use to free objects from [`mi_malloc_small`]
+    /// or [`mi_zalloc_small`]. Potentially a tiny bit faster than [`mi_free`](crate::mi_free).
+    pub fn mi_free_small(p: *mut c_void);
+
     /// Return the available bytes in a memory block.
     ///
     /// The returned size can be used to call `mi_expand` successfully.
@@ -314,6 +318,7 @@ extern "C" {
     /// Merge thread local statistics with the main statistics and reset.
     ///
     /// Note: This function is thread safe.
+    #[cfg(feature = "v2")]
     pub fn mi_stats_merge();
 
     /// Return the mimalloc version number.
@@ -470,9 +475,13 @@ pub type mi_error_fun = Option<unsafe extern "C" fn(code: c_int, arg: *mut c_voi
 /// Runtime options. All options are false by default.
 pub type mi_option_t = c_int;
 
-#[cfg(feature = "arena")]
+#[cfg(all(feature = "arena", feature = "v2"))]
 /// Arena Id
 pub type mi_arena_id_t = c_int;
+
+#[cfg(all(feature = "arena", not(feature = "v2")))]
+/// Arena Id
+pub type mi_arena_id_t = *mut c_void;
 
 // Note: mimalloc doc website seems to have the order of show_stats and
 // show_errors reversed as of 1.6.3, however what I have here is correct:
@@ -524,6 +533,7 @@ pub const mi_option_reserve_huge_os_pages_at: mi_option_t = 8;
 /// Option (experimental) Reserve specified amount of OS memory at startup, e.g. "1g" or "512m".
 pub const mi_option_reserve_os_memory: mi_option_t = 9;
 
+#[cfg(feature = "v2")]
 /// Option (experimental) the first N segments per thread are not eagerly committed (=1).
 pub const mi_option_eager_commit_delay: mi_option_t = 14;
 
@@ -542,15 +552,15 @@ pub const mi_option_max_errors: mi_option_t = 19;
 /// Option (experimental)
 pub const mi_option_max_warnings: mi_option_t = 20;
 
-#[cfg(not(feature = "v3"))]
+#[cfg(feature = "v2")]
 /// Option (experimental)
 pub const mi_option_max_segment_reclaim: mi_option_t = 21;
 
 /// Last option.
-#[cfg(not(feature = "v3"))]
-pub const _mi_option_last: mi_option_t = 37;
-#[cfg(feature = "v3")]
-pub const _mi_option_last: mi_option_t = 43;
+#[cfg(feature = "v2")]
+pub const _mi_option_last: mi_option_t = 38;
+#[cfg(not(feature = "v2"))]
+pub const _mi_option_last: mi_option_t = 46;
 
 extern "C" {
     // Note: mi_option_{enable,disable} aren't exposed because they're redundant
@@ -643,6 +653,9 @@ extern "C" {
 /// ```
 pub enum mi_heap_t {}
 
+#[cfg(not(feature = "v2"))]
+pub enum mi_theap_t {}
+
 /// An area of heap space contains blocks of a single size.
 ///
 /// The bytes in freed blocks are `committed - used`.
@@ -661,8 +674,12 @@ pub struct mi_heap_area_t {
     pub block_size: usize,
     /// Size in bytes of a full block including padding and metadata.
     pub full_block_size: usize,
-    /// Heap tag associated with this area
+    /// Heap tag associated with this area (not available in v3)
+    #[cfg(feature = "v2")]
     pub heap_tag: i32,
+    /// Reserved / internal (replaces `heap_tag` in v3)
+    #[cfg(not(feature = "v2"))]
+    pub reserved1: *mut c_void,
 }
 
 /// Visitor function passed to [`mi_heap_visit_blocks`]
@@ -708,9 +725,11 @@ extern "C" {
     /// Set the default heap to use for [`mi_malloc`](crate::mi_malloc) et al.
     ///
     /// Returns the previous default heap.
+    #[cfg(feature = "v2")]
     pub fn mi_heap_set_default(heap: *mut mi_heap_t) -> *mut mi_heap_t;
 
     /// Get the default heap that is used for [`mi_malloc`](crate::mi_malloc) et al.
+    #[cfg(feature = "v2")]
     pub fn mi_heap_get_default() -> *mut mi_heap_t;
 
     /// Get the backing heap.
@@ -718,6 +737,7 @@ extern "C" {
     /// The _backing_ heap is the initial default heap for a thread and always
     /// available for allocations. It cannot be destroyed or deleted except by
     /// exiting the thread.
+    #[cfg(feature = "v2")]
     pub fn mi_heap_get_backing() -> *mut mi_heap_t;
 
     /// Release outstanding resources in a specific heap.
@@ -746,6 +766,12 @@ extern "C" {
     ///
     /// `size` must be smaller or equal to [`MI_SMALL_SIZE_MAX`].
     pub fn mi_heap_malloc_small(heap: *mut mi_heap_t, size: usize) -> *mut c_void;
+
+    /// Equivalent to [`mi_zalloc_small`], but allocates out of the specific
+    /// heap instead of the default.
+    ///
+    /// `size` must be smaller or equal to [`MI_SMALL_SIZE_MAX`].
+    pub fn mi_heap_zalloc_small(heap: *mut mi_heap_t, size: usize) -> *mut c_void;
 
     /// Equivalent to [`mi_realloc`](crate::mi_realloc), but allocates out of
     /// the specific heap instead of the default.
@@ -913,6 +939,7 @@ extern "C" {
     /// Returns `true` if the block pointed to by `p` is in the `heap`.
     ///
     /// See [`mi_heap_check_owned`].
+    #[cfg(feature = "v2")]
     pub fn mi_heap_contains_block(heap: *mut mi_heap_t, p: *const c_void) -> bool;
 
     /// Check safely if any pointer is part of a heap.
@@ -925,6 +952,7 @@ extern "C" {
     ///
     /// See [`mi_heap_contains_block`], [`mi_heap_get_default`], and
     /// [`mi_is_in_heap_region`]
+    #[cfg(feature = "v2")]
     pub fn mi_heap_check_owned(heap: *mut mi_heap_t, p: *const c_void) -> bool;
 
     /// Check safely if any pointer is part of the default heap of this thread.
@@ -950,8 +978,31 @@ extern "C" {
     /// Returns `true` if all areas and blocks were visited.
     ///
     /// Passing a `None` visitor is allowed, and is a no-op.
+    #[cfg(feature = "v2")]
     pub fn mi_heap_visit_blocks(
         heap: *const mi_heap_t,
+        visit_all_blocks: bool,
+        visitor: mi_block_visit_fun,
+        arg: *mut c_void,
+    ) -> bool;
+
+    /// Visit all areas and blocks in `heap`.
+    ///
+    /// If `visit_all_blocks` is false, the `visitor` is only called once for
+    /// every heap area. If it's true, the `visitor` is also called for every
+    /// allocated block inside every area (with `!block.is_null()`). Return
+    /// `false` from the `visitor` to return early.
+    ///
+    /// `arg` is an extra argument passed into the `visitor`.
+    ///
+    /// Returns `true` if all areas and blocks were visited.
+    ///
+    /// Passing a `None` visitor is allowed, and is a no-op.
+    ///
+    /// Note: in v3 the `heap` parameter is non-const compared to v2.
+    #[cfg(not(feature = "v2"))]
+    pub fn mi_heap_visit_blocks(
+        heap: *mut mi_heap_t,
         visit_all_blocks: bool,
         visitor: mi_block_visit_fun,
         arg: *mut c_void,
@@ -981,6 +1032,26 @@ extern "C" {
         exclusive: bool,
         arena_id: *mut mi_arena_id_t,
     ) -> c_int;
+
+    /// Check if the heap page containing `p` is under-utilized.
+    ///
+    /// # Safety
+    /// Assumes the page belonging to `p` is only accessed by the calling thread.
+    pub fn mi_unsafe_heap_page_is_under_utilized(
+        heap: *mut mi_heap_t,
+        p: *mut c_void,
+        perc_threshold: usize,
+    ) -> bool;
+
+    #[cfg(not(feature = "v2"))]
+    /// Return the minimum size for an arena (v3 only).
+    pub fn mi_arena_min_size() -> usize;
+
+    #[cfg(not(feature = "v2"))]
+    /// Equivalent to [`mi_heap_zalloc_small`], but for a thread-local heap (`theap`) in v3.
+    ///
+    /// `size` must be smaller or equal to [`MI_SMALL_SIZE_MAX`].
+    pub fn mi_theap_zalloc_small(theap: *mut mi_theap_t, size: usize) -> *mut c_void;
 
     #[cfg(feature = "arena")]
     /// Manage a particular memory area for use by mimalloc.

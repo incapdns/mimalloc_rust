@@ -1,6 +1,6 @@
 [package]
 name = "mimalloc"
-version = "0.1.48"
+version = "0.1.50"
 authors = [
     "Octavian Oncescu <octavonce@gmail.com>",
     "Vincent Rouillé <vincent@speedy37.fr>",
@@ -25,7 +25,7 @@ members = [
 travis-ci = { repository = "purpleprotocol/mimalloc_rust" }
 
 [dependencies]
-libmimalloc-sys = { path = "libmimalloc-sys", version = "0.1.44", default-features = false }
+libmimalloc-sys = { path = "libmimalloc-sys", version = "0.1.47", default-features = false }
 
 [features]
 default = []
@@ -36,4 +36,4 @@ debug_in_debug = ["libmimalloc-sys/debug_in_debug"]
 local_dynamic_tls = ["libmimalloc-sys/local_dynamic_tls"]
 no_thp = ["libmimalloc-sys/no_thp"]
 extended = ["libmimalloc-sys/extended"]
-v3 = ["libmimalloc-sys/v3"]
+v2 = ["libmimalloc-sys/v2"]

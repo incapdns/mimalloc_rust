@@ -17,4 +17,4 @@ ctest2 = "0.4"
 [features]
 secure = ["libmimalloc-sys/secure"]
 extended = ["libmimalloc-sys/extended"]
-v3 = ["libmimalloc-sys/v3"]
+v2 = ["libmimalloc-sys/v2"]

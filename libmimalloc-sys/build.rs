@@ -4,10 +4,10 @@ use std::path::Path;
 fn main() {
     let mut build = cc::Build::new();
 
-    let version = if env::var("CARGO_FEATURE_V3").is_ok() {
-        "v3"
-    } else {
+    let version = if env::var("CARGO_FEATURE_V2").is_ok() {
         "v2"
+    } else {
+        "v3"
     };
 
     let cargo_manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");

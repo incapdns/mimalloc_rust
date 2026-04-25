@@ -32,14 +32,14 @@ To enable secure mode, put in `Cargo.toml`:
 mimalloc = { version = "*", features = ["secure"] }
 ```
 
-## Usage with v3
+## Usage with v2
 
-By default this library uses mimalloc `v2`.
-To enable `v3`, put in `Cargo.toml`:
+By default this library uses mimalloc `v3`.
+To use MiMalloc `v2`, write in `Cargo.toml`:
 
 ```ini
 [dependencies]
-mimalloc = { version = "*", features = ["v3"] }
+mimalloc = { version = "*", features = ["v2"] }
 ```
 
 [crates.io]: https://crates.io/crates/mimalloc

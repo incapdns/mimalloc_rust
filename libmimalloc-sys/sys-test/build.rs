@@ -12,10 +12,10 @@ fn main() {
     } else {
         None
     };
-    let version = if env::var("CARGO_FEATURE_V3").is_ok() {
-        "v3"
-    } else {
+    let version = if env::var("CARGO_FEATURE_V2").is_ok() {
         "v2"
+    } else {
+        "v3"
     };
 
     let mut cfg = ctest2::TestGenerator::new();
@@ -25,7 +25,7 @@ fn main() {
         ))
         .cfg("feature", secure)
         .cfg("feature", extended)
-        .cfg("feature", (version == "v3").then_some("v3"))
+        .cfg("feature", (version == "v2").then_some("v2"))
         .fn_cname(|rust, link_name| link_name.unwrap_or(rust).to_string())
         // ignore whether or not the option enum is signed.
         .skip_signededness(|c| c.ends_with("_t") || c.ends_with("_e"))
