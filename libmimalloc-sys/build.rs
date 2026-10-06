@@ -90,7 +90,12 @@ fn main() {
     let dynamic_tls = env::var("CARGO_FEATURE_LOCAL_DYNAMIC_TLS").is_ok();
 
     if target_family == "unix" && target_os != "haiku" {
-        if dynamic_tls {
+        if max_performance && target_os == "linux" {
+            // Fastest ELF TLS model. This crate is statically linked into the
+            // final executable, so local-exec can avoid the extra GOT/TLS
+            // indirection used by initial-exec.
+            build.flag_if_supported("-ftls-model=local-exec");
+        } else if dynamic_tls {
             build.flag_if_supported("-ftls-model=local-dynamic");
         } else {
             build.flag_if_supported("-ftls-model=initial-exec");
@@ -114,6 +119,8 @@ fn main() {
         build.define("MI_GUARDED", "0");
         build.define("MI_PADDING", "0");
         build.define("MI_FREE_IS_CHECKED", "0");
+        build.define("MI_FREE_USE_PAGEMAP", "0");
+        build.define("MI_OPT_FREE_SMALL", "1");
         build.define("MI_SKIP_COLLECT_ON_EXIT", "1");
         build.define("MI_OPT_SIMD", "1");
 
