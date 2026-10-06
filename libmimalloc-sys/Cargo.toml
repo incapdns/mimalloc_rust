@@ -1,6 +1,6 @@
 [package]
 name = "libmimalloc-sys"
-version = "0.1.50"
+version = "0.1.51"
 authors = ["Octavian Oncescu <octavonce@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/purpleprotocol/mimalloc_rust/tree/master/libmimalloc-sys"
@@ -43,6 +43,7 @@ arena = []
 local_dynamic_tls = []
 win_direct_tls = []
 no_thp = []
+max-performance = []
 v2 = []
 
 # Show `extended` on docs.rs since it's the full API surface.

@@ -40,6 +40,7 @@ fn main() {
         .unwrap_or(false);
     let debug_enabled = env::var_os("CARGO_FEATURE_DEBUG").is_some()
         || (env::var_os("CARGO_FEATURE_DEBUG_IN_DEBUG").is_some() && cargo_debug);
+    let max_performance = env::var_os("CARGO_FEATURE_MAX_PERFORMANCE").is_some();
 
     if target_family != "windows" {
         build.flag("-Wno-error=date-time");
@@ -100,6 +101,42 @@ fn main() {
         && env::var_os("CARGO_FEATURE_NO_THP").is_some()
     {
         build.define("MI_NO_THP", "1");
+    }
+
+    if max_performance {
+        // These are compile-time-only mimalloc optimizations and cannot be
+        // enabled through MIMALLOC_* environment options.
+        //
+        // Keep all diagnostic/security/profiling fast-path work disabled and
+        // let the compiler use the best instruction set for native builds.
+        build.define("MI_PROFILE", "0");
+        build.define("MI_STATS", "0");
+        build.define("MI_GUARDED", "0");
+        build.define("MI_PADDING", "0");
+        build.define("MI_FREE_IS_CHECKED", "0");
+        build.define("MI_SKIP_COLLECT_ON_EXIT", "1");
+        build.define("MI_OPT_SIMD", "1");
+
+        let host = env::var("HOST").unwrap_or_default();
+        let target = env::var("TARGET").unwrap_or_default();
+        if host == target {
+            if compiler.is_like_msvc() {
+                if target_arch == "x86_64" {
+                    build.flag_if_supported("/arch:AVX2");
+                }
+            } else {
+                build.flag_if_supported("-march=native");
+                build.flag_if_supported("-mtune=native");
+            }
+        } else if !compiler.is_like_msvc() {
+            // Match mimalloc's upstream MI_OPT_ARCH defaults for cross builds.
+            if target_arch == "x86_64" {
+                build.flag_if_supported("-march=haswell");
+                build.flag_if_supported("-mavx2");
+            } else if target_arch == "aarch64" {
+                build.flag_if_supported("-march=armv8.1-a");
+            }
+        }
     }
 
     if debug_enabled {
